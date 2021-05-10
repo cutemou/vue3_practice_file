@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>景點列表</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="images/favicon.ico" rel="shortcut icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+  integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+  <meta charset="UTF-8">
+  <script src="/javascripts/vendor.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.2/vue.global.js"></script>
+</head>
+
+<body class="bg-lighter">
+  <div class="container main my-5">
+    <div class="row">
+      <main class="col post">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+        <div id="app" class="mt-2">
+          <div class="row h-100">
+            <div class="col-md-3 h-100 d-flex flex-column">
+              <div class="form-floating mb-2">
+                <!-- <button type="button" @click="getData">測試資料接收</button> -->
+                <input type="text" v-model="cacheSearch" class="form-control" id="search" placeholder="search">
+                <label for="search">search</label>
+              </div>
+              <div class="list-group option">
+                <label class="list-group-item" v-for="(item, keys) in filterSearch">
+                  <input @click="cacheArea = item" class="form-check-input me-1" type="radio" name="area">
+                  {{ item.Name }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-8 h-100 d-flex flex-column">
+              <div class="form-floating">
+                <select v-model="cacheArea" id="cacheArea" class="form-select w-50 mb-2" aria-label="select example">
+                  <option selected value="" disabled>瀏覽紀錄</option>
+                  <option v-for="(item, keys) in browseLog" :value="item">{{ keys + 1 }}.{{ item.Name }}</option>
+                </select>
+                <label for="cacheArea">瀏覽紀錄</label>
+              </div>
+              <div class="card overflow-auto">
+                <div v-if="cacheArea.Name">
+                  <img :src="cacheArea.Picture1" class="card-img-top" :alt="cacheArea.Name">
+                  <iframe width="100%" height="300" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
+                    :src=`https://maps.google.com.tw/maps?f=q&hl=zh-TW&geocode=&q=${cacheArea.Py},${cacheArea.Px}(${cacheArea.Name})&z=16&output=embed`></iframe>
+                  <div class="card-body">
+                    <h5 class="card-title">{{ cacheArea.Name }}</h5>
+                    <p>{{ cacheArea.Description }}</p>
+                  </div>
+                </div>
+                <div v-else class="card-body">
+                  請選擇場域
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <script>
+
+
+
+
+          const App = {
+            data() {
+              return {
+                datastore: [], //api傳入資料
+                cacheArea: '', //暫時選定的地區
+                cacheSearch: '', //搜尋欄的內容
+                browseLog: [],  //瀏覽紀錄
+                dataArray: [],
+                dataObject: {},
+                positionArray: [],
+              };
+            },
+            created() {
+              // axios.get(apiUrl).then((res) => {
+              // for(let i = 0 ; i < res.data.result.records.length ; i++){
+              //   this.dataObject = {
+              //     name : res.data.result.records[`${i}`].Name,
+              //     picture : res.data.result.records[`${i}`].Picture1,
+              //     Px : res.data.result.records[`${i}`].Px,
+              //     Py : res.data.result.records[`${i}`].Py,
+              //     Description : res.data.result.records[`${i}`].Description,
+              //   }
+              //   this.dataArray.push(this.dataObject);
+              // }
+              // Object.values(this.dataArray);
+              // console.dir(this.dataArray);  
+              // })
+              this.getData();
+            },
+            methods: {
+              getData() {
+                const apiUrl = 'https://raw.githubusercontent.com/hexschool/KCGTravel/master/datastore_search.json';
+                // console.log(this.dataArray[0].name);  
+                axios.get(apiUrl).then((res) => {
+                  this.datastore = res.data.result.records
+                  // console.log(this.datastore);
+                })
+              },
+              // generateObject(){
+              //   positionArray.push()
+              // }
+            },
+            computed: {
+              filterSearch() {
+                return this.datastore.filter((item) => item.Name.match(this.cacheSearch));
+              },
+              // filterArea() {
+              //   return this.datastore.filter((item) => item.Name === this.cacheArea);
+              // },
+            },
+            watch: {
+              cacheArea() {
+                if (this.browseLog.length < 10) {
+                  this.browseLog.push(this.cacheArea);
+                } else {
+                  this.browseLog.shift();
+                  this.browseLog.push(this.cacheArea);
+                }
+              },
+            },
+          };
+
+          Vue.createApp(App).mount('#app');
+        </script>
+
+        <style>
+          #app {
+            height: 600px;
+          }
+
+          .option {
+            overflow-y: auto;
+          }
+        </style>
+      </main>
+ 
+  <link rel="stylesheet" href="/stylesheets/all.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+</body>
+
+</html>

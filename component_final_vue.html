@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="stylesheets/all.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <script src="javascripts/vendor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.2/vue.global.js"></script>
+    
+    <title>高雄旅遊景點彙整</title>
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="row" id="content">
+                <h2 class="text-center my-4">高雄旅遊景點彙整</h2>
+                  <!-- props -->
+                <Card :current-data="currentData"></Card>
+            </div>
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination" id="pageid">
+                                <!-- props                  emits -->
+                        <pagination :page-total="pageTotal" @switch-page="NowPage"></pagination>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="module">
+        //卡片元件
+        const Card = {
+            data() {
+                return {
+                }
+            },
+            props: ['currentData'],
+            template: `
+                <div class="row mb-2" id="content">
+                    <div class="col-md-4 py-2 px-1" v-for="item in currentData" :key="item">
+                        <div class="card h-100">
+                            <div class="card bg-dark text-white text-left">
+                                <img class="card-img-top img-cover" height="155" :src="item.Picture1">
+                                <div class="card-img-overlay d-flex justify-content-between align-items-end p-0 px-3" style="background-color: rgba(0, 0, 0, .2)">
+                                    <h5 class="card-img-title-lg">{{item.Name}}</h5>
+                                    <h5 class="card-img-title-sm">{{item.Zone}}</h5>
+                                </div>
+                            </div>
+                            <div class="card-body text-left">
+                                <p class="card-text"><i class="far fa-clock fa-clock-time"></i>&nbsp;{{item.Opentime}}</p>
+                                <p class="card-text"><i class="fas fa-map-marker-alt fa-map-gps"></i>&nbsp;{{item.Add}}</p>
+                                <p class="card-text"><i class="fas fa-mobile-alt fa-mobile"></i>&nbsp;{{item.Tel}}</p>
+                                <p v-if="item.Ticketinfo" class="card-text"><i class="fas fa-tags text-warning"></i>&nbsp;{{item.Ticketinfo}}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+        }
+        //分頁元件
+        const pagination = {
+            data() {
+                return {
+                    NowPage: 1
+                }
+            },
+            props: {
+                pageTotal: {
+                    type: Number,
+                    required: true
+                }
+            },
+            emits: ['switchPage'],
+            //點擊分頁按鈕觸發換頁
+            methods: {
+                switchPage(e) {
+                    if (e.target.nodeName !== 'A') return;
+                    this.NowPage = Number(e.target.dataset.page);
+                    this.$emit('switchPage', this.NowPage);
+                }
+            },
+            //第一頁沒有上一頁功能
+            //當前頁面有active效果
+            //最後一頁沒有下一頁功能
+            template: `
+                <li class="page-item" :class="{disabled : NowPage === 1}"><a class="page-link" href="#" :data-page="NowPage - 1" @click="switchPage">Previous</a></li>
+                <li v-for="(page,key) in pageTotal" :key="page+1" class="page-item" :class="{active : page === NowPage}"><a class="page-link" href="#" :data-page="page" @click.prevent="switchPage">{{page}}</a></li>
+                <li class="page-item" :class="{disabled : NowPage === pageTotal}"><a class="page-link" href="#" :data-page="NowPage + 1" @click="switchPage">Next</a></li>
+            `
+        }
+        const App = {
+            data() {
+                return {
+                    //當前資料
+                    currentData: [],
+                    // 設定要顯示在畫面上的資料數量
+                    // 預設每一頁只顯示 21 筆資料。
+                    perpage: 21,
+                    //預設為第一頁
+                    nowPage: 1,
+                    //總資料數
+                    dataTotal: 0,
+                    //總頁數
+                    pageTotal: 0,
+                }
+            },
+            //匯入元件
+            components: {
+                Card,
+                pagination
+            },
+            created() {
+                //使用axios匯入api
+                axios.get('https://api.kcg.gov.tw/api/service/Get/9c8e1450-e833-499c-8320-29b36b7ace5c')
+                    .then(res => {
+                        //存入資料集
+                        this.jsonData = res.data.data.XML_Head.Infos.Info;
+                        //取得資料總數
+                        this.dataTotal = this.jsonData.length;
+                        //總頁數
+                        // page 按鈕總數量公式 總資料數量 / 每一頁要顯示的資料
+                        // 這邊要注意，因為有可能會出現餘數，所以要無條件進位。
+                        this.pageTotal = Math.ceil(this.dataTotal / this.perpage);
+                        //載入時預設為第一頁
+                        this.pagination(this.jsonData,this.nowPage);
+                    })
+                    .catch(err => {
+                        console.log(err.response);
+                    })
+            },
+            methods: {
+                pagination(jsonData, nowPage) {
+                    console.log(nowPage);
+
+                    // 因為要避免當前頁數筆總頁數還要多，假設今天總頁數是 3 筆，就不可能是 4 或 5
+                    // 所以要在寫入一個判斷避免這種狀況。
+                    // 當"當前頁數"比"總頁數"大的時候，"當前頁數"就等於"總頁數"
+                    // 注意這一行在最前面並不是透過 nowPage 傳入賦予與 currentPage，所以才會寫這一個判斷式，但主要是預防一些無法預期的狀況，例如：nowPage 突然發神經？！
+                    if (nowPage > this.pageTotal) {
+                        nowPage = this.pageTotal;
+                    }
+
+                    // 由前面可知 最小數字為 6 ，所以用答案來回推公式。
+                    //每頁的第一筆和最後一筆資料
+                    const minData = (nowPage * this.perpage) - this.perpage + 1;
+                    const maxData = (nowPage * this.perpage);
+
+                    // 這邊將會使用 ES6 forEach 做資料處理
+                    // 首先必須使用索引來判斷資料位子，所以要使用 index
+                    jsonData.forEach((item, index) => {
+                        // 獲取陣列索引，但因為索引是從 0 開始所以要 +1。
+                        const num = index + 1;
+                        // 這邊判斷式會稍微複雜一點
+                        // 當 num 比 minData 大且又小於 maxData 就push進去新陣列。
+                        if (num >= minData && num <= maxData) {
+                            this.currentData.push(item);
+                        }
+                    })
+                },
+                //呈現當前頁面資料
+                NowPage(nowPage) {
+                    this.nowPage = nowPage;
+                    this.currentData = [];
+                    this.pagination(this.jsonData, this.nowPage);
+                    console.log('NowPage',this.currentData);                   
+                }
+            },
+        };
+
+        Vue.createApp(App).mount('#app');
+    </script>
+</body>
+
+</html>
